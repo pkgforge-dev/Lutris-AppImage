@@ -1,4 +1,4 @@
-name: Lutris Appimage
+name: Lutris
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
@@ -19,7 +19,7 @@ jobs:
         sudo apt install zsync
         chmod +x ./lutris-appimage.sh && ./lutris-appimage.sh
         mkdir -p ./dist
-        mv *.AppImage* dist/
+        mv *.AppImage* *.AppBundle* dist/
 
     - name: Check version file
       run: |
@@ -29,7 +29,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4.4.3
       with:
-        name: AppImage
+        name: build_artifacts
         path: 'dist'
         
     - name: Upload version file
@@ -46,7 +46,7 @@ jobs:
       steps:
         - uses: actions/download-artifact@v4.1.8
           with:
-            name: AppImage
+            name: build_artifacts
         - uses: actions/download-artifact@v4.1.8
           with:
             name: version
@@ -68,7 +68,7 @@ jobs:
         - name: Continuous Releaser
           uses: softprops/action-gh-release@v2
           with:
-            name: "Lutris AppImage ${{ env.APP_VERSION}}"
+            name: "Lutris ${{ env.APP_VERSION}}"
             tag_name: "${{ env.APP_VERSION}}"
             prerelease: false
             draft: false
@@ -76,6 +76,7 @@ jobs:
             make_latest: true
             files: |
               *.AppImage*
+              *.AppBundle*
           continue-on-error: false
 
         #Snapshot Release
@@ -95,4 +96,5 @@ jobs:
             make_latest: false
             files: |
               *.AppImage*
+              *.AppBundle*
           continue-on-error: false
