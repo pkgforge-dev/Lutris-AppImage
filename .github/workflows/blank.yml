@@ -28,6 +28,8 @@ jobs:
 
       - name: Make AppImage
         run: |
+          echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/98-apparmor-unuserns.conf
+          echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
           sudo apt install zsync
           chmod +x ./*-appimage.sh 
           ./*-appimage.sh
