@@ -22,7 +22,7 @@ jobs:
 #            name: "Build AppImage"
 #            arch: aarch64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
 
@@ -90,7 +90,7 @@ jobs:
             *.AppImage*
             *.AppBundle*
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Update LATEST_VERSION
         run: |
           echo "${{ env.VERSION }}" > ./LATEST_VERSION
