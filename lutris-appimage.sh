@@ -3,6 +3,12 @@ set -e
 
 # An example of lutris packaging in a RunImage container
 
+export ARCH="$(uname -m)"
+export DESKTOP=https://raw.githubusercontent.com/lutris/lutris/refs/heads/master/share/applications/net.lutris.Lutris.desktop
+export ICON=https://github.com/lutris/lutris/blob/master/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png?raw=true
+export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|latest|*-$ARCH.AppImage.zsync"
+URUNTIME="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/uruntime2appimage.sh"
+
 if [ ! -x 'runimage' ]; then
 	echo '== download base RunImage'
 	curl -o runimage -L "https://github.com/VHSgunzo/runimage/releases/download/continuous/runimage-$(uname -m)"
@@ -19,7 +25,8 @@ run_install() {
 		lib32-libpulse vkd3d lib32-vkd3d wget xdg-utils vulkan-mesa-layers
 		lib32-vulkan-mesa-layers freetype2 lib32-freetype2 fuse2 mangohud
 		lib32-mangohud gamescope gamemode lib32-gamemode wine lib32-libglvnd
-		lib32-gnutls xterm python-protobuf xdg-desktop-portal-gtk pipewire-pulse zenity-gtk3 libtheora glew glfw
+		lib32-gnutls xterm python-protobuf xdg-desktop-portal-gtk pipewire-pulse
+		zenity-gtk3 libtheora glew glfw
 	)
 
 	echo '== checking for updates'
@@ -32,15 +39,18 @@ run_install() {
 	yes|pac -S glibc-eac lib32-glibc-eac
 
 	echo '== install debloated llvm for space saving (optionally)'
-	LLVM="https://github.com/pkgforge-dev/llvm-libs-debloated/releases/download/continuous/llvm-libs-mini-x86_64.pkg.tar.zst"
-	wget --retry-connrefused --tries=30 "$LLVM" -O ./llvm-libs.pkg.tar.zst
-	pac -U --noconfirm ./llvm-libs.pkg.tar.zst
-	rm -f ./llvm-libs.pkg.tar.zst
+	EXTRA_PACKAGES="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/get-debloated-pkgs.sh"
+	wget --retry-connrefused --tries=30 "$EXTRA_PACKAGES" -O ./get-debloated-pkgs.sh
+	chmod +x ./get-debloated-pkgs.sh
+	./get-debloated-pkgs.sh --add-mesa gtk3-mini opus-mini libxml2-mini
+	
+	# remove llvm-libs but don't force it just in case something else depends on it
+	pac -Rsn --noconfirm llvm-libs || true
 
 	echo '== shrink (optionally)'
 	pac -Rsndd --noconfirm wget gocryptfs jq gnupg
 	rim-shrink --all
-	pac -Rsndd --noconfirm binutils svt-av1
+	pac -Rsndd --noconfirm binutils
 
 	pac -Qi | awk -F': ' '/Name/ {name=$2}
 		/Installed Size/ {size=$2}
@@ -49,8 +59,6 @@ run_install() {
 
 	VERSION=$(pacman -Q lutris | awk 'NR==1 {print $2; exit}')
 	echo "$VERSION" > ~/version
-	cp /usr/share/icons/hicolor/scalable/apps/net.lutris.Lutris.svg ~/
-	cp /usr/share/applications/net.lutris.Lutris.desktop ~/
 
 	echo '== create RunImage config for app (optionally)'
 	cat <<- 'EOF' > "$RUNDIR/config/Run.rcfg"
@@ -83,10 +91,6 @@ rm -f ./lutris.RunImage
 mv ./RunDir ./AppDir
 mv ./AppDir/Run ./AppDir/AppRun
 
-mv ~/net.lutris.Lutris.desktop  ./AppDir
-mv ~/net.lutris.Lutris.svg      ./AppDir
-ln -s net.lutris.Lutris.svg     ./AppDir/.DirIcon
-
 # debloat
 rm -rfv ./AppDir/sharun/bin/chisel \
 	./AppDir/rootfs/usr/lib*/libgo.so* \
@@ -101,26 +105,12 @@ rm -rfv ./AppDir/sharun/bin/chisel \
 	./AppDir/rootfs/usr/lib/udev/hwdb.bin
 
 # Make AppImage with uruntime
-VERSION="$(cat ~/version)"
-export ARCH="$(uname -m)"
-UPINFO="gh-releases-zsync|$(echo "$GITHUB_REPOSITORY" | tr '/' '|')|latest|*-$ARCH.AppImage.zsync"
-URUNTIME="https://github.com/VHSgunzo/uruntime/releases/latest/download/uruntime-appimage-dwarfs-$ARCH"
-
-wget --retry-connrefused --tries=30 "$URUNTIME" -O ./uruntime
-chmod +x ./uruntime
-
-# Add udpate info to runtime
-echo "Adding update information \"$UPINFO\" to runtime..."
-./uruntime --appimage-addupdinfo "$UPINFO"
-
-echo "Generating AppImage..."
-./uruntime --appimage-mkdwarfs -f \
-	--set-owner 0 --set-group 0 \
-	--no-history --no-create-timestamp \
-	--categorize=hotness --hotness-list=lutris.dwfsprof \
-	--compression zstd:level=22 -S26 -B32 \
-	--header uruntime \
-	-i ./AppDir -o Lutris+wine-"$VERSION"-anylinux-"$ARCH".AppImage
+export VERSION="$(cat ~/version)"
+export OUTNAME=Lutris+wine-"$VERSION"-anylinux-"$ARCH".AppImage
+export OPTIMIZE_LAUNCH=1
+wget --retry-connrefused --tries=30 "$URUNTIME" -O ./uruntime2appimage
+chmod +x ./uruntime2appimage
+./uruntime2appimage
 
 # Fetch AppBundle creation tooling
 wget -qO ./pelf "https://github.com/xplshn/pelf/releases/latest/download/pelf_$ARCH"
@@ -128,14 +118,11 @@ chmod +x ./pelf
 
 echo "Generating [sqfs]AppBundle...(Go runtime)"
 ./pelf --add-appdir ./AppDir \
-	--compression "--categorize=hotness --hotness-list=lutris.dwfsprof -C zstd:level=22 -S26 -B32" \
+	--compression "--categorize=hotness --hotness-list=./AppDir/.dwarfsprofile -C zstd:level=22 -S26 -B6" \
 	--appbundle-id="net.lutris.Lutris-$(date +%d_%m_%Y)-contrarybaton60" \
-	--appimage-compat --disable-use-random-workdir \
+	--appimage-compat \
 	--add-updinfo "$UPINFO" \
 	--output-to "Lutris+wine-${VERSION}-anylinux-${ARCH}.dwfs.AppBundle"
-
-echo "Generating zsync file..."
-zsyncmake *.AppImage -u *.AppImage
-zsyncmake *.AppBundle -u *.AppBundle
+zsyncmake ./*.AppBundle -u ./*.AppBundle
 
 echo "All Done!"
