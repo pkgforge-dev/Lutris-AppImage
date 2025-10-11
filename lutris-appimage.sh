@@ -115,4 +115,9 @@ echo "Generating [sqfs]AppBundle...(Go runtime)"
 	--output-to "Lutris+wine-${VERSION}-anylinux-${ARCH}.dwfs.AppBundle"
 zsyncmake ./*.AppBundle -u ./*.AppBundle
 
+mkdir -p ./dist
+mv -v ./*.AppImage*  ./dist
+mv -v ./*.AppBundle* ./dist
+mv -v ~/version      ./dist
+
 echo "All Done!"
