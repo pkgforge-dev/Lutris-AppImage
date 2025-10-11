@@ -7,17 +7,18 @@ export ARCH="$(uname -m)"
 export DESKTOP=https://raw.githubusercontent.com/lutris/lutris/refs/heads/master/share/applications/net.lutris.Lutris.desktop
 export ICON=https://github.com/lutris/lutris/blob/master/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png?raw=true
 export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|latest|*-$ARCH.AppImage.zsync"
+export RIM_ALLOW_ROOT=1
 URUNTIME="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/uruntime2appimage.sh"
 
-if [ ! -x 'runimage' ]; then
-	echo '== download base RunImage'
-	curl -o runimage -L "https://github.com/VHSgunzo/runimage/releases/download/continuous/runimage-$(uname -m)"
-	chmod +x runimage
-fi
+
+echo '== download base RunImage'
+curl -o runimage -L "https://github.com/VHSgunzo/runimage/releases/download/continuous/runimage-$(uname -m)"
+chmod +x runimage
 
 run_install() {
 	set -e
 
+	EXTRA_PACKAGES="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/get-debloated-pkgs.sh"
 	INSTALL_PKGS=(
 		lutris egl-wayland vulkan-radeon lib32-vulkan-radeon vulkan-tools
 		vulkan-intel lib32-vulkan-intel vulkan-nouveau lib32-vulkan-nouveau
@@ -29,17 +30,10 @@ run_install() {
 		zenity-gtk3 libtheora glew glfw
 	)
 
-	echo '== checking for updates'
 	rim-update
-
-	echo '== install packages'
 	pac --needed --noconfirm -S "${INSTALL_PKGS[@]}"
-
-	echo '== install glibc with patches for Easy Anti-Cheat (optionally)'
 	yes|pac -S glibc-eac lib32-glibc-eac
 
-	echo '== install debloated llvm for space saving (optionally)'
-	EXTRA_PACKAGES="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/get-debloated-pkgs.sh"
 	wget --retry-connrefused --tries=30 "$EXTRA_PACKAGES" -O ./get-debloated-pkgs.sh
 	chmod +x ./get-debloated-pkgs.sh
 	./get-debloated-pkgs.sh --add-mesa gtk3-mini opus-mini libxml2-mini gdk-pixbuf2-mini
@@ -78,18 +72,12 @@ run_install() {
 	RIM_AUTORUN=lutris
 	EOF
 
-	echo '== Build new DwarFS runimage with zstd 22 lvl and 24 block size'
-	rim-build -s lutris.RunImage
+	rim-build -s temp.RunImage
 }
 export -f run_install
-
-##########################
-
-# enable OverlayFS mode, disable Nvidia driver check and run install steps
 RIM_OVERFS_MODE=1 RIM_NO_NVIDIA_CHECK=1 ./runimage bash -c run_install
-./lutris.RunImage --runtime-extract
-rm -f ./lutris.RunImage
-
+./temp.RunImage --runtime-extract
+rm -f ./temp.RunImage
 mv ./RunDir ./AppDir
 mv ./AppDir/Run ./AppDir/AppRun
 
