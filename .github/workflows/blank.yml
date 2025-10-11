@@ -33,9 +33,6 @@ jobs:
           sudo apt install zsync
           chmod +x ./*-appimage.sh 
           ./*-appimage.sh
-          mkdir -p dist
-          mv *.AppImage* dist/
-          mv *.AppBundle* dist/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4.6.2
@@ -43,38 +40,22 @@ jobs:
           name: AppImage-${{ matrix.arch }}
           path: 'dist'
 
-      - name: Upload version file
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: version
-          path: ~/version
-          overwrite: true
-
   release:
-    name: "release"
+    if: ${{ github.ref_name == 'main' }}
     needs: [build]
-    permissions:
-      actions: read
-      security-events: write
-      contents: write
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4.3.0
         with:
-          name: AppImage-x86_64
-
-#      - uses: actions/download-artifact@v4.3.0
-#        with:
-#          name: AppImage-aarch64
-
-      - uses: actions/download-artifact@v4.3.0
-        with:
-          name: version
+          pattern: AppImage-*
+          merge-multiple: true
 
       - name: Read version and Get date
         run: |
-          echo "VERSION=$(cat version)" >> "${GITHUB_ENV}"
-          echo "DATE=$(date +'%Y-%m-%d_%s')" >> "$GITHUB_ENV"
+          cat ./version
+          echo "VERSION=$(cat ./version)" >> "${GITHUB_ENV}"
+          echo "DATE=$(date +'%Y-%m-%d_%s')" >> "${GITHUB_ENV}"
 
       - name: Release Artifacts
         uses: softprops/action-gh-release@v2.2.2
@@ -84,7 +65,6 @@ jobs:
           prerelease: false
           draft: false
           generate_release_notes: false
-          fail_on_unmatched_files: false
           make_latest: true
           files: |
             *.AppImage*
@@ -97,5 +77,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ./LATEST_VERSION
-          git commit -m 'bump `LATEST_VERSION` [skip ci]'
+          git commit --allow-empty -m 'bump `LATEST_VERSION` [skip ci]'
           git push
