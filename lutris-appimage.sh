@@ -36,7 +36,7 @@ run_install() {
 
 	wget --retry-connrefused --tries=30 "$EXTRA_PACKAGES" -O ./get-debloated-pkgs.sh
 	chmod +x ./get-debloated-pkgs.sh
-	./get-debloated-pkgs.sh --add-mesa gtk3-mini opus-mini libxml2-mini gdk-pixbuf2-mini
+	./get-debloated-pkgs.sh --add-mesa gtk3-mini opus-mini libxml2-mini gdk-pixbuf2-mini librsvg-mini
 	
 	# remove llvm-libs but don't force it just in case something else depends on it
 	pac -Rsn --noconfirm llvm-libs || true
