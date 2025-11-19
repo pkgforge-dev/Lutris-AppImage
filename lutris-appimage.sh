@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
+
 set -e
 
 # An example of lutris packaging in a RunImage container
-
 export ARCH="$(uname -m)"
 export DESKTOP=https://raw.githubusercontent.com/lutris/lutris/refs/heads/master/share/applications/net.lutris.Lutris.desktop
 export ICON=https://github.com/lutris/lutris/blob/master/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png?raw=true
@@ -10,6 +10,7 @@ export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}
 export RIM_ALLOW_ROOT=1
 URUNTIME="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/uruntime2appimage.sh"
 
+pacman -Syu --noconfirm zsync wget xorg-server-xvfb
 
 echo '== download base RunImage'
 curl -o runimage -L "https://github.com/VHSgunzo/runimage/releases/download/continuous/runimage-$(uname -m)"
@@ -72,12 +73,12 @@ run_install() {
 	RIM_AUTORUN=lutris
 	EOF
 
-	rim-build -s temp.RunImage
+	rim-build -s /tmp/temp.RunImage
 }
 export -f run_install
 RIM_OVERFS_MODE=1 RIM_NO_NVIDIA_CHECK=1 ./runimage bash -c run_install
-./temp.RunImage --runtime-extract
-rm -f ./temp.RunImage
+/tmp/temp.RunImage --runtime-extract
+rm -f /tmp/temp.RunImage
 mv ./RunDir ./AppDir
 mv ./AppDir/Run ./AppDir/AppRun
 
