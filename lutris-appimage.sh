@@ -8,7 +8,7 @@ export DESKTOP=https://raw.githubusercontent.com/lutris/lutris/refs/heads/master
 export ICON=https://github.com/lutris/lutris/blob/master/share/icons/hicolor/128x128/apps/net.lutris.Lutris.png?raw=true
 export UPINFO="gh-releases-zsync|${GITHUB_REPOSITORY%/*}|${GITHUB_REPOSITORY#*/}|latest|*-$ARCH.AppImage.zsync"
 export RIM_ALLOW_ROOT=1
-URUNTIME="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/uruntime2appimage.sh"
+SHARUN="https://raw.githubusercontent.com/pkgforge-dev/Anylinux-AppImages/refs/heads/main/useful-tools/quick-sharun.sh"
 
 pacman -Syu --noconfirm zsync wget xorg-server-xvfb
 
@@ -95,13 +95,13 @@ rm -rfv ./AppDir/sharun/bin/chisel \
 	./AppDir/rootfs/usr/share/terminfo \
 	./AppDir/rootfs/usr/lib/udev/hwdb.bin
 
-# Make AppImage with uruntime
+# Make AppImage with quick-sharun
 export VERSION="$(cat ~/version)"
 export OUTNAME=Lutris+wine-"$VERSION"-anylinux-"$ARCH".AppImage
 export OPTIMIZE_LAUNCH=1
-wget --retry-connrefused --tries=30 "$URUNTIME" -O ./uruntime2appimage
-chmod +x ./uruntime2appimage
-./uruntime2appimage
+wget --retry-connrefused --tries=30 "$SHARUN" -O ./quick-sharun
+chmod +x ./quick-sharun
+./quick-sharun --make-appimage
 
 # Fetch AppBundle creation tooling
 wget -qO ./pelf "https://github.com/xplshn/pelf/releases/latest/download/pelf_$ARCH"
